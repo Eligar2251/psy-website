@@ -17,7 +17,7 @@ export default function Footer() {
               <Link href="/" className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
                   <span className="text-white font-heading font-bold text-lg">
-                    Е
+                    Н
                   </span>
                 </div>
                 <div>
