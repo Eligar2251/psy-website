@@ -41,7 +41,7 @@ export default function AboutPreview() {
           <div>
             <p className="text-primary-600 font-medium mb-3">Обо мне</p>
             <h2 className="text-stone-900 mb-6">
-              Елена Сорокина
+                Наталья Пакина
             </h2>
 
             <div className="space-y-4 text-stone-600 leading-relaxed mb-8">

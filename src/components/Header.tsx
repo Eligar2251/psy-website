@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { Menu, X, Phone } from "lucide-react";
 import { navItems, siteConfig } from "@/lib/data";
 import Button from "./ui/Button";
+import UserMenu from "./UserMenu";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,12 +22,10 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Закрываем мобильное меню при переходе
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Блокируем скролл при открытом мобильном меню
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
     return () => {
@@ -44,7 +43,10 @@ export default function Header() {
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between" aria-label="Основная навигация">
+        <nav
+          className="flex items-center justify-between"
+          aria-label="Основная навигация"
+        >
           {/* Логотип */}
           <Link
             href="/"
@@ -57,12 +59,7 @@ export default function Header() {
               </span>
             </div>
             <div className="hidden sm:block">
-              <p
-                className={clsx(
-                  "font-heading font-semibold text-lg leading-tight transition-colors",
-                  isScrolled ? "text-stone-900" : "text-stone-900"
-                )}
-              >
+              <p className="font-heading font-semibold text-lg leading-tight text-stone-900">
                 {siteConfig.name}
               </p>
               <p className="text-xs text-stone-400 leading-tight">
@@ -89,7 +86,7 @@ export default function Header() {
             ))}
           </div>
 
-          {/* CTA кнопки */}
+          {/* Правая часть: UserMenu + CTA */}
           <div className="hidden lg:flex items-center gap-3">
             <a
               href={`tel:${siteConfig.phone.replace(/\s/g, "")}`}
@@ -99,24 +96,30 @@ export default function Header() {
               <Phone className="w-4 h-4" />
               <span className="hidden xl:inline">{siteConfig.phone}</span>
             </a>
+
+            <UserMenu />
+
             <Button href="/booking" size="sm">
               Записаться
             </Button>
           </div>
 
           {/* Мобильная кнопка */}
-          <button
-            className="lg:hidden p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-expanded={isMobileMenuOpen}
-            aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <UserMenu />
+            <button
+              className="p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-expanded={isMobileMenuOpen}
+              aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </nav>
       </div>
 
@@ -129,23 +132,19 @@ export default function Header() {
             : "opacity-0 pointer-events-none"
         )}
       >
-        {/* Backdrop */}
         <div
           className="absolute inset-0 bg-black/20 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
 
-        {/* Панель меню */}
         <div
           className={clsx(
             "absolute top-0 right-0 w-full max-w-sm h-full bg-white shadow-elevated",
-            "transform transition-transform duration-300 ease-out",
-            "flex flex-col",
+            "transform transition-transform duration-300 ease-out flex flex-col",
             isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
           )}
         >
-          {/* Шапка мобильного меню */}
           <div className="flex items-center justify-between p-4 border-b border-stone-100">
             <p className="font-heading font-semibold text-lg text-stone-900">
               Меню
@@ -159,8 +158,10 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Ссылки */}
-          <nav className="flex-1 overflow-y-auto p-4" aria-label="Мобильная навигация">
+          <nav
+            className="flex-1 overflow-y-auto p-4"
+            aria-label="Мобильная навигация"
+          >
             <ul className="space-y-1">
               {navItems.map((item) => (
                 <li key={item.href}>
@@ -180,7 +181,6 @@ export default function Header() {
             </ul>
           </nav>
 
-          {/* Нижняя часть мобильного меню */}
           <div className="p-4 border-t border-stone-100 space-y-3">
             <a
               href={`tel:${siteConfig.phone.replace(/\s/g, "")}`}

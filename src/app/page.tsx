@@ -22,7 +22,6 @@ export default function HomePage() {
       <CTABlock />
       <FAQ />
 
-      {/* Schema.org: LocalBusiness */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

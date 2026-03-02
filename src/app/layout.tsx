@@ -3,9 +3,9 @@ import { Inter, Lora } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
+import { AuthProvider } from "@/lib/auth-context";
 import { siteConfig } from "@/lib/data";
 import "./globals.css";
-import PageTracker from "@/components/PageTracker";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -44,14 +44,9 @@ export const metadata: Metadata = {
     "депрессия",
     "парная терапия",
     "КПТ",
-    "когнитивно-поведенческая терапия",
     "психолог Москва",
-    "психолог онлайн",
-    "выгорание",
-    "самооценка",
   ],
   authors: [{ name: siteConfig.name }],
-  creator: siteConfig.name,
   openGraph: {
     type: "website",
     locale: "ru_RU",
@@ -60,31 +55,8 @@ export const metadata: Metadata = {
     title: `${siteConfig.name} — ${siteConfig.title}`,
     description: siteConfig.description,
   },
-  twitter: {
-    card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.title}`,
-    description: siteConfig.description,
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
+  robots: { index: true, follow: true },
   metadataBase: new URL(BASE_URL),
-  alternates: {
-    canonical: BASE_URL,
-  },
-  verification: {
-    // Добавьте после регистрации в Google Search Console
-    // google: "your-verification-code",
-    // yandex: "your-yandex-verification",
-  },
 };
 
 export default function RootLayout({
@@ -98,7 +70,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen flex flex-col">
-        {/* Skip to content (accessibility) */}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg"
@@ -106,13 +77,14 @@ export default function RootLayout({
           Перейти к содержимому
         </a>
 
-        <Header />
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
-        <Footer />
-        <ScrollToTop />
-        <PageTracker />
+        <AuthProvider>
+          <Header />
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+          <Footer />
+          <ScrollToTop />
+        </AuthProvider>
       </body>
     </html>
   );

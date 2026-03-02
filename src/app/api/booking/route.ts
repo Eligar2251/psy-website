@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, BookingInsert } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { sendTelegramNotification } from "@/lib/telegram";
 
-// Простая rate-limit защита (в памяти, сбрасывается при рестарте)
+// Тип для заявки
+interface BookingInsert {
+  name: string;
+  phone: string;
+  email?: string;
+  service: string;
+  format: string;
+  preferred_time?: string;
+  message?: string;
+  source?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+}
+
+// Простая rate-limit защита
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 минут
+  const windowMs = 15 * 60 * 1000;
   const maxRequests = 5;
 
   const entry = rateLimitMap.get(ip);
@@ -48,7 +63,6 @@ function validateBooking(data: Record<string, unknown>): {
     errors.push("Имя слишком длинное");
   }
 
-  // Телефон: допускаем +7, 8, цифры, пробелы, дефисы, скобки
   const phoneClean = phone.replace(/[\s\-\(\)]/g, "");
   if (!phoneClean || !/^[\+]?[0-9]{10,15}$/.test(phoneClean)) {
     errors.push("Некорректный номер телефона");
@@ -91,7 +105,6 @@ function validateBooking(data: Record<string, unknown>): {
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       "unknown";
@@ -105,7 +118,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Валидация
     const { valid, errors, cleaned } = validateBooking(body);
 
     if (!valid || !cleaned) {
@@ -126,7 +138,6 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error("Supabase error:", dbError);
-      // Не прерываем — всё равно отправим в Telegram
     }
 
     // Отправка в Telegram
