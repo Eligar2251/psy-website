@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import RichTextEditor from "@/components/dashboard/RichTextEditor";
 import type { DBPost } from "@/lib/types";
 
 interface PostEditorProps {
@@ -48,7 +49,7 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
     content: post?.content || "",
     category: post?.category || "",
     read_time: post?.read_time || "5 мин",
-    status: post?.status || "draft",
+    status: post?.status || ("draft" as "draft" | "published"),
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -63,10 +64,19 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
     }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleContentChange = (html: string) => {
+    setForm((prev) => ({ ...prev, content: html }));
+  };
+
+  const handleSubmit = async (e: FormEvent, publishStatus?: "draft" | "published") => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+
+    const submitData = {
+      ...form,
+      status: publishStatus || form.status,
+    };
 
     try {
       const url =
@@ -76,7 +86,7 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(submitData),
       });
 
       const data = await res.json();
@@ -95,18 +105,13 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
     }
   };
 
-  const handleSaveAsDraft = async () => {
-    setForm((prev) => ({ ...prev, status: "draft" }));
-    // Submit через setTimeout, чтобы state обновился
-    setTimeout(() => {
-      const formEl = document.getElementById("post-form") as HTMLFormElement;
-      formEl?.requestSubmit();
-    }, 0);
-  };
-
   return (
     <div>
-      <form id="post-form" onSubmit={handleSubmit} className="space-y-6">
+      <form
+        id="post-form"
+        onSubmit={(e) => handleSubmit(e)}
+        className="space-y-6"
+      >
         {/* Верхняя панель */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white rounded-2xl shadow-soft p-4">
           <Link
@@ -131,22 +136,29 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
               {showPreview ? "Редактор" : "Превью"}
             </button>
 
-            {mode === "edit" && (
-              <button
-                type="button"
-                onClick={handleSaveAsDraft}
-                className="px-3 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100 transition-colors"
-              >
-                Черновик
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={(e) =>
+                handleSubmit(
+                  e as unknown as FormEvent<HTMLFormElement>,
+                  "draft"
+                )
+              }
+              disabled={isLoading}
+              className="px-3 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100 transition-colors disabled:opacity-50"
+            >
+              Черновик
+            </button>
 
             <Button
-              type="submit"
+              type="button"
               disabled={isLoading}
               size="sm"
-              onClick={() =>
-                setForm((prev) => ({ ...prev, status: "published" }))
+              onClick={(e) =>
+                handleSubmit(
+                  e as unknown as FormEvent<HTMLFormElement>,
+                  "published"
+                )
               }
             >
               {isLoading ? (
@@ -221,37 +233,31 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
                 />
               </div>
 
-              {/* Контент */}
+              {/* Контент — визуальный редактор или превью */}
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">
                   Контент <span className="text-accent-500">*</span>
-                  <span className="text-stone-400 font-normal ml-2">
-                    (поддерживает HTML)
-                  </span>
                 </label>
 
                 {showPreview ? (
-                  <div className="min-h-[400px] px-4 py-3 rounded-xl border border-stone-200 bg-white overflow-auto">
-                    <div
-                      className="prose prose-stone prose-lg max-w-none prose-headings:font-heading"
-                      dangerouslySetInnerHTML={{
-                        __html: form.content || "<p>Начните писать...</p>",
-                      }}
-                    />
+                  <div className="min-h-[400px] px-5 py-4 rounded-xl border border-stone-200 bg-white overflow-auto">
+                    {form.content ? (
+                      <div
+                        className="prose prose-stone prose-lg max-w-none prose-headings:font-heading prose-headings:font-semibold prose-a:text-primary-600"
+                        dangerouslySetInnerHTML={{ __html: form.content }}
+                      />
+                    ) : (
+                      <p className="text-stone-400">
+                        Контент пока пуст. Переключитесь в редактор и начните
+                        писать.
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <textarea
-                    value={form.content}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        content: e.target.value,
-                      }))
-                    }
-                    required
-                    rows={20}
-                    placeholder="<h2>Заголовок</h2>&#10;<p>Текст статьи...</p>"
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all resize-y font-mono text-sm leading-relaxed"
+                  <RichTextEditor
+                    content={form.content}
+                    onChange={handleContentChange}
+                    placeholder="Начните писать статью... Используйте панель инструментов для форматирования."
                   />
                 )}
               </div>
@@ -327,26 +333,36 @@ export default function PostEditor({ mode, post }: PostEditorProps) {
               </div>
             </div>
 
-            {/* Подсказка по HTML */}
+            {/* Горячие клавиши */}
             <div className="bg-primary-50/50 rounded-2xl p-5">
               <h3 className="text-sm font-semibold text-stone-900 mb-3">
-                Подсказка по HTML
+                Горячие клавиши
               </h3>
-              <div className="text-xs text-stone-600 space-y-2 font-mono">
-                <p>&lt;h2&gt;Заголовок&lt;/h2&gt;</p>
-                <p>&lt;h3&gt;Подзаголовок&lt;/h3&gt;</p>
-                <p>&lt;p&gt;Абзац текста&lt;/p&gt;</p>
-                <p>&lt;strong&gt;Жирный&lt;/strong&gt;</p>
-                <p>&lt;em&gt;Курсив&lt;/em&gt;</p>
-                <p>&lt;ul&gt;&lt;li&gt;Список&lt;/li&gt;&lt;/ul&gt;</p>
-                <p>&lt;ol&gt;&lt;li&gt;Нумерованный&lt;/li&gt;&lt;/ol&gt;</p>
-                <p>&lt;blockquote&gt;Цитата&lt;/blockquote&gt;</p>
-                <p>&lt;a href=&quot;...&quot;&gt;Ссылка&lt;/a&gt;</p>
+              <div className="text-xs text-stone-600 space-y-1.5">
+                <Shortcut keys="Ctrl+B" label="Жирный" />
+                <Shortcut keys="Ctrl+I" label="Курсив" />
+                <Shortcut keys="Ctrl+U" label="Подчёркнутый" />
+                <Shortcut keys="Ctrl+Z" label="Отменить" />
+                <Shortcut keys="Ctrl+Y" label="Повторить" />
+                <Shortcut keys="Ctrl+Shift+7" label="Нумер. список" />
+                <Shortcut keys="Ctrl+Shift+8" label="Маркир. список" />
+                <Shortcut keys="Ctrl+Shift+B" label="Цитата" />
               </div>
             </div>
           </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+function Shortcut({ keys, label }: { keys: string; label: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-stone-500">{label}</span>
+      <kbd className="px-1.5 py-0.5 rounded bg-white border border-stone-200 font-mono text-stone-600">
+        {keys}
+      </kbd>
     </div>
   );
 }

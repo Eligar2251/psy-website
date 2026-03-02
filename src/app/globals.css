@@ -80,3 +80,88 @@
     text-wrap: balance;
   }
 }
+
+/* ─── TipTap Editor ─── */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #a8a29e;
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap {
+  min-height: 400px;
+}
+
+.tiptap:focus {
+  outline: none;
+}
+
+.tiptap h2 {
+  @apply text-2xl font-heading font-semibold text-stone-900 mt-8 mb-3;
+}
+
+.tiptap h3 {
+  @apply text-xl font-heading font-semibold text-stone-900 mt-6 mb-2;
+}
+
+.tiptap h4 {
+  @apply text-lg font-heading font-semibold text-stone-800 mt-5 mb-2;
+}
+
+.tiptap p {
+  @apply text-stone-700 leading-relaxed mb-4;
+}
+
+.tiptap ul {
+  @apply list-disc pl-6 mb-4 space-y-1;
+}
+
+.tiptap ol {
+  @apply list-decimal pl-6 mb-4 space-y-1;
+}
+
+.tiptap li {
+  @apply text-stone-700;
+}
+
+.tiptap li p {
+  @apply mb-0;
+}
+
+.tiptap blockquote {
+  @apply border-l-4 border-primary-500 pl-4 py-1 my-4 text-stone-600 italic;
+}
+
+.tiptap a {
+  @apply text-primary-600 underline decoration-primary-300 hover:decoration-primary-500 transition-colors;
+}
+
+.tiptap mark {
+  @apply bg-yellow-200 px-0.5 rounded;
+}
+
+.tiptap code {
+  @apply bg-primary-50 text-primary-700 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.tiptap hr {
+  @apply border-stone-200 my-6;
+}
+
+.tiptap strong {
+  @apply font-semibold text-stone-900;
+}
+
+.tiptap em {
+  @apply italic;
+}
+
+.tiptap s {
+  @apply line-through text-stone-400;
+}
+
+.tiptap u {
+  @apply underline decoration-stone-400;
+}
