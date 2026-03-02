@@ -26,7 +26,7 @@ export default function ReviewsSlider() {
 
         <div className="relative">
           {/* Карточка отзыва */}
-          <div className="bg-cream rounded-3xl p-8 md:p-12 relative">
+          <div className="bg-warm-50 rounded-3xl p-8 md:p-12 relative">
             <Quote
               className="absolute top-6 left-6 w-10 h-10 text-primary-100"
               aria-hidden="true"
