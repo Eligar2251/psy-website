@@ -1,0 +1,66 @@
+import Link from "next/link";
+import { ArrowRight, Clock } from "lucide-react";
+import Container from "@/components/ui/Container";
+import SectionHeading from "@/components/ui/SectionHeading";
+import Button from "@/components/ui/Button";
+import { blogPosts } from "@/lib/data";
+
+export default function BlogPreview() {
+  const posts = blogPosts.slice(0, 3);
+
+  return (
+    <section className="section-padding gradient-section" aria-label="Блог">
+      <Container>
+        <SectionHeading
+          title="Полезные материалы"
+          subtitle="Статьи о ментальном здоровье, психологии и саморазвитии"
+        />
+
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          {posts.map((post) => (
+            <Link
+              key={post.slug}
+              href={`/blog/${post.slug}`}
+              className="card group"
+            >
+              {/* Изображение-плейсхолдер */}
+              <div className="w-full aspect-[16/10] rounded-xl bg-gradient-to-br from-primary-100 to-warm-100 mb-4 overflow-hidden">
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-4xl">📝</span>
+                </div>
+              </div>
+
+              {/* Категория и время чтения */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-medium">
+                  {post.category}
+                </span>
+                <span className="flex items-center gap-1 text-xs text-stone-400">
+                  <Clock className="w-3 h-3" />
+                  {post.readTime}
+                </span>
+              </div>
+
+              {/* Заголовок */}
+              <h3 className="text-lg font-heading font-semibold text-stone-900 mb-2 group-hover:text-primary-700 transition-colors line-clamp-2">
+                {post.title}
+              </h3>
+
+              {/* Описание */}
+              <p className="text-sm text-stone-500 leading-relaxed line-clamp-3">
+                {post.excerpt}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="text-center">
+          <Button href="/blog" variant="outline">
+            Все статьи
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </Container>
+    </section>
+  );
+}
