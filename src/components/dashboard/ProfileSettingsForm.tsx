@@ -1,50 +1,61 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
-import type { Profile } from "@/lib/types";
 
-export default function ProfileSettingsForm({
-  profile,
-}: {
-  profile: Profile | null;
-}) {
-  const { refreshProfile } = useAuth();
-  const [fullName, setFullName] = useState(profile?.full_name || "");
+export default function ProfileSettingsForm() {
+  const { user, profile, isLoading, refreshProfile } = useAuth();
+  const supabase = createClient();
+
+  const [fullName, setFullName] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
+  useEffect(() => {
+    setFullName(profile?.full_name || "");
+  }, [profile?.full_name]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
     setStatus("loading");
+    setMessage("");
 
     try {
-      const supabase = getSupabaseBrowser();
+      const name = fullName.trim();
+      if (name.length < 2) {
+        setStatus("error");
+        setMessage("Имя должно содержать минимум 2 символа");
+        return;
+      }
 
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName.trim() })
-        .eq("id", profile?.id);
+        .update({ full_name: name })
+        .eq("id", user.id);
 
       if (error) {
         setStatus("error");
-        setMessage("Ошибка сохранения");
+        setMessage(error.message);
         return;
       }
 
       await refreshProfile();
       setStatus("success");
-      setMessage("Профиль обновлён");
-
-      setTimeout(() => setStatus("idle"), 3000);
+      setMessage("Имя обновлено");
+      setTimeout(() => setStatus("idle"), 2500);
     } catch {
       setStatus("error");
-      setMessage("Ошибка соединения");
+      setMessage("Ошибка сети");
     }
   };
+
+  if (isLoading) return <div className="text-stone-500">Загрузка...</div>;
+  if (!user) return <div className="text-stone-500">Нужно войти</div>;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -54,27 +65,21 @@ export default function ProfileSettingsForm({
         </label>
         <input
           type="email"
-          value={profile?.email || ""}
+          value={profile?.email || user.email || ""}
           disabled
-          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-500 cursor-not-allowed"
+          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-500"
         />
-        <p className="text-xs text-stone-400 mt-1">Email нельзя изменить</p>
       </div>
 
       <div>
-        <label
-          htmlFor="settings-name"
-          className="block text-sm font-medium text-stone-700 mb-1.5"
-        >
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">
           Имя
         </label>
         <input
-          id="settings-name"
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="Ваше имя"
-          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
+          className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white"
         />
       </div>
 

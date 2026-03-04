@@ -24,7 +24,6 @@ export function createClient(): SupabaseClient {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      // чтобы не плодились sb-...:1/:2/:3
       storageKey: "psy-website-auth",
     },
   });

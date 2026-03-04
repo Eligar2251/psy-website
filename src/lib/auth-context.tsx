@@ -4,13 +4,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   useCallback,
   ReactNode,
 } from "react";
 import type { Profile } from "@/lib/types";
 import { createClient } from "@/lib/supabase";
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 
 type AuthUser = { id: string; email?: string };
 
@@ -33,21 +34,17 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [sb, setSb] = useState<SupabaseClient | null>(null);
+  const sb = useMemo(() => createClient(), []);
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // создаём клиента строго на клиенте
-  useEffect(() => {
-    setSb(createClient());
-  }, []);
-
   const loadProfile = useCallback(
-    async (client: SupabaseClient, uid: string, email?: string) => {
+    async (uid: string, email?: string) => {
       try {
-        const { data: p1 } = await client
+        // пробуем прочитать
+        const { data: p1 } = await sb
           .from("profiles")
           .select("*")
           .eq("id", uid)
@@ -58,15 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // если нет профиля — создаём (нужна policy profiles_insert_own)
-        await client.from("profiles").insert({
+        // если профиля нет — создаём (должна быть policy profiles_insert_own)
+        await sb.from("profiles").insert({
           id: uid,
           email: email ?? "",
           full_name: "",
           role: "user",
         });
 
-        const { data: p2 } = await client
+        const { data: p2 } = await sb
           .from("profiles")
           .select("*")
           .eq("id", uid)
@@ -77,14 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
     },
-    []
+    [sb]
   );
 
   const applySession = useCallback(
-    (client: SupabaseClient, session: Session | null) => {
+    (session: Session | null) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email });
-        void loadProfile(client, session.user.id, session.user.email ?? undefined);
+        void loadProfile(session.user.id, session.user.email ?? undefined);
       } else {
         setUser(null);
         setProfile(null);
@@ -95,15 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (!sb) return;
-
     let alive = true;
 
     (async () => {
       try {
         const { data } = await sb.auth.getSession();
         if (!alive) return;
-        applySession(sb, data.session);
+        applySession(data.session);
       } catch {
         if (alive) setIsLoading(false);
       }
@@ -111,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       if (!alive) return;
-      applySession(sb, session);
+      applySession(session);
     });
 
     return () => {
@@ -123,18 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setUser(null);
     setProfile(null);
-
-    if (sb) {
-      await sb.auth.signOut();
-    }
-
+    await sb.auth.signOut();
     window.location.href = "/";
   }, [sb]);
 
   const refreshProfile = useCallback(async () => {
-    if (!sb || !user) return;
-    await loadProfile(sb, user.id, user.email);
-  }, [sb, user, loadProfile]);
+    if (!user) return;
+    await loadProfile(user.id, user.email);
+  }, [user, loadProfile]);
 
   return (
     <AuthContext.Provider

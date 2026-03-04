@@ -1,100 +1,100 @@
-import { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { MessageSquare } from "lucide-react";
-import { isAdmin, createServerSupabase } from "@/lib/supabase-server";
-import CommentDeleteButton from "@/components/dashboard/CommentDeleteButton";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Комментарии",
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
+
+type CommentRow = {
+  id: string;
+  created_at: string;
+  content: string;
+  author_id: string;
+  profiles: { full_name: string; email: string } | null;
+  posts: { title: string; slug: string } | null;
 };
 
-export default async function CommentsPage() {
-  const admin = await isAdmin();
-  if (!admin) redirect("/dashboard");
+export default function CommentsPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const { isLoading, user, isAdmin } = useAuth();
 
-  const supabase = await createServerSupabase();
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: comments } = await supabase
-    .from("comments")
-    .select(
-      `
-      *,
-      profiles (
-        full_name,
-        email
-      ),
-      posts (
-        title,
-        slug
-      )
-    `
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) return router.replace("/auth/login?redirect=/dashboard/comments");
+    if (!isAdmin) return router.replace("/dashboard");
 
-  const allComments = comments || [];
+    (async () => {
+      const { data, error } = await supabase
+        .from("comments")
+        .select("*, profiles(full_name,email), posts(title,slug)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (!error && data) setComments(data as any);
+      setLoading(false);
+    })();
+  }, [isLoading, user, isAdmin, router, supabase]);
+
+  const del = async (id: string) => {
+    if (!confirm("Удалить комментарий?")) return;
+    await supabase.from("comments").delete().eq("id", id);
+    setComments((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  if (isLoading || loading) return <div className="text-stone-500">Загрузка...</div>;
+  if (!user || !isAdmin) return null;
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-heading font-semibold text-stone-900 mb-1">
-          Комментарии
-        </h1>
-        <p className="text-stone-500 text-sm">{allComments.length} комментариев</p>
-      </div>
+      <h1 className="text-2xl font-heading font-semibold text-stone-900 mb-6">
+        Комментарии
+      </h1>
 
-      {allComments.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-soft p-12 text-center">
-          <MessageSquare className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-          <h3 className="text-lg font-heading font-semibold text-stone-900 mb-2">
-            Комментариев пока нет
-          </h3>
+      {comments.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-soft p-10 text-center text-stone-500">
+          Комментариев нет
         </div>
       ) : (
         <div className="space-y-3">
-          {allComments.map((comment: Record<string, unknown>) => {
-            const profiles = comment.profiles as Record<string, string> | null;
-            const posts = comment.posts as Record<string, string> | null;
-
-            return (
-              <div
-                key={comment.id as string}
-                className="bg-white rounded-2xl shadow-soft p-5"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 text-sm">
-                      <span className="font-medium text-stone-900">
-                        {profiles?.full_name || "Аноним"}
-                      </span>
-                      <span className="text-stone-300">•</span>
-                      <span className="text-stone-400 text-xs">
-                        {new Date(comment.created_at as string).toLocaleDateString(
-                          "ru-RU"
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-stone-700 text-sm leading-relaxed mb-2">
-                      {comment.content as string}
-                    </p>
-                    {posts?.title && (
-                      <p className="text-xs text-stone-400">
-                        К статье:{" "}
-                        <a
-                          href={`/blog/${posts.slug}`}
-                          className="text-primary-600 hover:underline"
-                          target="_blank"
-                        >
-                          {posts.title}
+          {comments.map((c) => (
+            <div key={c.id} className="bg-white rounded-2xl shadow-soft p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm text-stone-900 font-medium">
+                    {c.profiles?.full_name || "Аноним"}{" "}
+                    <span className="text-xs text-stone-400">
+                      ({c.profiles?.email || ""})
+                    </span>
+                  </p>
+                  <p className="text-xs text-stone-400 mb-2">
+                    {new Date(c.created_at).toLocaleDateString("ru-RU")}
+                    {c.posts?.title ? (
+                      <>
+                        {" "}• к статье:{" "}
+                        <a className="text-primary-600 hover:underline" href={`/blog/${c.posts.slug}`} target="_blank">
+                          {c.posts.title}
                         </a>
-                      </p>
-                    )}
-                  </div>
-                  <CommentDeleteButton commentId={comment.id as string} />
+                      </>
+                    ) : null}
+                  </p>
+                  <p className="text-stone-700 text-sm leading-relaxed">{c.content}</p>
                 </div>
+
+                <button
+                  onClick={() => del(c.id)}
+                  className="p-2 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Удалить"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>

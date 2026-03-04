@@ -1,55 +1,54 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import {
-  Star,
-  Send,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  LogIn,
-} from "lucide-react";
-import Link from "next/link";
+import { Star, Send, Loader2, CheckCircle, AlertCircle, LogIn } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
 import { services } from "@/lib/data";
 
 export default function ReviewForm() {
   const { user, isLoading: authLoading } = useAuth();
-  const [form, setForm] = useState({
-    text: "",
-    rating: 5,
-    service: "",
-  });
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
+  const supabase = createClient();
+
+  const [form, setForm] = useState({ text: "", rating: 5, service: "" });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  const handleStarClick = (star: number) => {
-    setForm((prev) => ({ ...prev, rating: star }));
-  };
+  const handleStarClick = (star: number) => setForm((p) => ({ ...p, rating: star }));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
     setStatus("loading");
+    setMessage("");
 
     try {
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const text = form.text.trim();
+      if (text.length < 10) {
+        setStatus("error");
+        setMessage("Отзыв слишком короткий (минимум 10 символов)");
+        return;
+      }
+
+      const { error } = await supabase.from("reviews").insert({
+        author_id: user.id,
+        text,
+        rating: form.rating,
+        service: form.service,
+        is_approved: false,
+        is_visible: true,
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setStatus("success");
-        setMessage(data.message);
-      } else {
+      if (error) {
         setStatus("error");
-        setMessage(data.error || "Ошибка. Попробуйте позже.");
+        setMessage(error.message);
+        return;
       }
+
+      setStatus("success");
+      setMessage("Спасибо! Отзыв появится после модерации.");
     } catch {
       setStatus("error");
       setMessage("Ошибка сети");
@@ -58,7 +57,6 @@ export default function ReviewForm() {
 
   if (authLoading) return null;
 
-  // Не авторизован
   if (!user) {
     return (
       <div className="card text-center">
@@ -67,27 +65,22 @@ export default function ReviewForm() {
           Хотите оставить отзыв?
         </h3>
         <p className="text-stone-500 mb-4 text-sm">
-          Войдите или зарегистрируйтесь, чтобы поделиться опытом
+          Войдите или зарегистрируйтесь
         </p>
         <div className="flex gap-3 justify-center">
-          <Button href="/auth/login" size="sm">
-            Войти
-          </Button>
-          <Button href="/auth/register" variant="outline" size="sm">
-            Регистрация
-          </Button>
+          <Button href="/auth/login" size="sm">Войти</Button>
+          <Button href="/auth/register" variant="outline" size="sm">Регистрация</Button>
         </div>
       </div>
     );
   }
 
-  // Успех
   if (status === "success") {
     return (
       <div className="card text-center">
         <CheckCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
         <h3 className="text-lg font-heading font-semibold text-stone-900 mb-2">
-          Отзыв отправлен!
+          Готово!
         </h3>
         <p className="text-stone-500 text-sm">{message}</p>
       </div>
@@ -101,95 +94,61 @@ export default function ReviewForm() {
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Звёзды */}
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-2">
             Ваша оценка
           </label>
           <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
+            {[1, 2, 3, 4, 5].map((s) => (
               <button
-                key={star}
+                key={s}
                 type="button"
-                onClick={() => handleStarClick(star)}
-                className="p-1 transition-transform hover:scale-110"
-                aria-label={`Оценка ${star}`}
+                onClick={() => handleStarClick(s)}
+                className="p-1 hover:scale-110 transition-transform"
               >
-                <Star
-                  className={`w-7 h-7 ${
-                    star <= form.rating
-                      ? "text-accent-400 fill-accent-400"
-                      : "text-stone-200"
-                  }`}
-                />
+                <Star className={`w-7 h-7 ${s <= form.rating ? "text-accent-400 fill-accent-400" : "text-stone-200"}`} />
               </button>
             ))}
           </div>
         </div>
 
-        {/* Услуга */}
         <div>
-          <label
-            htmlFor="review-service"
-            className="block text-sm font-medium text-stone-700 mb-1.5"
-          >
-            Направление работы
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">
+            Направление (необязательно)
           </label>
           <select
-            id="review-service"
             value={form.service}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, service: e.target.value }))
-            }
-            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
+            onChange={(e) => setForm((p) => ({ ...p, service: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white"
           >
-            <option value="">Выберите (необязательно)</option>
+            <option value="">Выберите</option>
             {services.map((s) => (
-              <option key={s.slug} value={s.title}>
-                {s.title}
-              </option>
+              <option key={s.slug} value={s.title}>{s.title}</option>
             ))}
           </select>
         </div>
 
-        {/* Текст отзыва */}
         <div>
-          <label
-            htmlFor="review-text"
-            className="block text-sm font-medium text-stone-700 mb-1.5"
-          >
-            Ваш отзыв <span className="text-accent-500">*</span>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">
+            Отзыв <span className="text-accent-500">*</span>
           </label>
           <textarea
-            id="review-text"
             value={form.text}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, text: e.target.value }))
-            }
+            onChange={(e) => setForm((p) => ({ ...p, text: e.target.value }))}
             rows={5}
-            required
-            minLength={10}
             maxLength={2000}
-            placeholder="Расскажите о вашем опыте терапии..."
-            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white resize-none"
+            placeholder="Расскажите о вашем опыте..."
           />
-          <p className="mt-1 text-xs text-stone-400 text-right">
-            {form.text.length}/2000
-          </p>
+          <p className="mt-1 text-xs text-stone-400 text-right">{form.text.length}/2000</p>
         </div>
 
-        {/* Ошибка */}
         {status === "error" && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4" />
             {message}
           </div>
         )}
-
-        <p className="text-xs text-stone-400">
-          Отзыв будет опубликован после модерации. Ваше имя будет указано
-          как при регистрации.
-        </p>
 
         <Button type="submit" disabled={status === "loading"} className="w-full">
           {status === "loading" ? (
@@ -200,7 +159,7 @@ export default function ReviewForm() {
           ) : (
             <>
               <Send className="w-5 h-5" />
-              Отправить отзыв
+              Отправить
             </>
           )}
         </Button>

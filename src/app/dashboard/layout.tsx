@@ -25,9 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) {
-    return null; // пока redirect
-  }
+  if (!user) return null;
 
   return (
     <div className="pt-20 min-h-screen bg-stone-50">
