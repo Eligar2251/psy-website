@@ -102,7 +102,6 @@ export default function AboutPage() {
               <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-elevated max-w-lg mx-auto">
                 <img
                   src="/photo-about.jpg"
-                  alt="Елена Соколова — психолог"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </div>

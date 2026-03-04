@@ -5,16 +5,16 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LogIn, Loader2, AlertCircle, Mail, Lock } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { createClient } from "@/lib/supabase";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/";
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -23,28 +23,47 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      const supabase = getSupabaseBrowser();
+      // Явная проверка env (частая причина "не работает на Vercel")
+      if (
+        !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      ) {
+        setError(
+          "Supabase не настроен: нет NEXT_PUBLIC_SUPABASE_URL или NEXT_PUBLIC_SUPABASE_ANON_KEY в Vercel Environment Variables."
+        );
+        return;
+      }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const supabase = createClient();
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (authError) {
-        if (authError.message.toLowerCase().includes("invalid login credentials")) {
+        const msg = authError.message.toLowerCase();
+        if (msg.includes("invalid login credentials")) {
           setError("Неверный email или пароль");
-        } else if (authError.message.toLowerCase().includes("email not confirmed")) {
-          setError("Email не подтверждён. Проверьте почту.");
+        } else if (msg.includes("email not confirmed")) {
+          setError("Email не подтверждён. Проверьте почту (если подтверждение включено).");
         } else {
           setError(authError.message);
         }
         return;
       }
 
-      // Важно: надёжный переход с полной синхронизацией состояния
-      window.location.href = redirect;
-    } catch {
-      setError("Ошибка соединения. Попробуйте позже");
+      // Если вдруг session не создалась — покажем ошибку
+      if (!data.session) {
+        setError("Не удалось создать сессию. Попробуйте ещё раз.");
+        return;
+      }
+
+      // Самый надёжный способ, чтобы UI точно обновился
+      window.location.assign(redirectTo);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Ошибка входа. Откройте консоль и проверьте настройки Supabase.");
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +87,7 @@ export default function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="email@example.com"
+            autoComplete="email"
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
           />
         </div>
@@ -89,6 +109,7 @@ export default function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
+            autoComplete="current-password"
             placeholder="Минимум 6 символов"
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
           />
@@ -96,9 +117,9 @@ export default function LoginForm() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
 
