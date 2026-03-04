@@ -1,27 +1,52 @@
-import { Metadata } from "next";
-import { redirect, notFound } from "next/navigation";
-import { isAdmin } from "@/lib/supabase-server";
-import { getPostById } from "@/lib/posts";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase";
+import type { DBPost } from "@/lib/types";
 import PostEditor from "@/components/dashboard/PostEditor";
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
+export default function EditPostPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { isLoading, user, isAdmin } = useAuth();
+  const supabase = createClient();
 
-export const metadata: Metadata = {
-  title: "Редактирование статьи",
-};
+  const [post, setPost] = useState<DBPost | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function EditPostPage({ params }: Props) {
-  const admin = await isAdmin();
-  if (!admin) redirect("/dashboard");
+  useEffect(() => {
+    if (isLoading) return;
 
-  const { id } = await params;
-  const post = await getPostById(id);
+    if (!user) {
+      router.replace(`/auth/login?redirect=/dashboard/posts/${id}/edit`);
+      return;
+    }
+    if (!isAdmin) {
+      router.replace("/dashboard");
+      return;
+    }
 
-  if (!post) {
-    notFound();
-  }
+    (async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        router.replace("/dashboard/posts");
+        return;
+      }
+
+      setPost(data as DBPost);
+      setLoading(false);
+    })();
+  }, [isLoading, user, isAdmin, id, router, supabase]);
+
+  if (isLoading || loading) return <div className="text-stone-500">Загрузка...</div>;
+  if (!post) return null;
 
   return (
     <div>
@@ -31,6 +56,7 @@ export default async function EditPostPage({ params }: Props) {
         </h1>
         <p className="text-stone-500 text-sm">/{post.slug}</p>
       </div>
+
       <PostEditor mode="edit" post={post} />
     </div>
   );
