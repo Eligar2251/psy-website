@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Lora } from "next/font/google";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ScrollToTop from "@/components/ScrollToTop";
-import { AuthProvider } from "@/lib/auth-context";
+import AppShell from "@/components/AppShell";
 import { siteConfig } from "@/lib/data";
 import "./globals.css";
 
@@ -34,26 +31,13 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: [
-    "психолог",
-    "психотерапевт",
-    "терапия",
-    "консультация психолога",
-    "онлайн психолог",
-    "тревожность",
-    "депрессия",
-    "парная терапия",
-    "КПТ",
-    "психолог Москва",
-  ],
+  keywords: ["психолог", "психотерапевт", "консультация психолога", "онлайн психолог"],
   authors: [{ name: siteConfig.name }],
   openGraph: {
     type: "website",
     locale: "ru_RU",
     url: BASE_URL,
     siteName: siteConfig.name,
-    title: `${siteConfig.name} — ${siteConfig.title}`,
-    description: siteConfig.description,
   },
   robots: { index: true, follow: true },
   metadataBase: new URL(BASE_URL),
@@ -66,25 +50,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className={`${inter.variable} ${lora.variable}`}>
-      <head>
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-      </head>
       <body className="min-h-screen flex flex-col">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg"
-        >
-          Перейти к содержимому
-        </a>
-
-        <AuthProvider>
-          <Header />
-          <main id="main-content" className="flex-1">
-            {children}
-          </main>
-          <Footer />
-          <ScrollToTop />
-        </AuthProvider>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

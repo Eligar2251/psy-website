@@ -73,25 +73,15 @@ export default function Hero() {
           <div className="relative hidden lg:block">
             <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-elevated">
               {/* Плейсхолдер для фото психолога */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-200 to-warm-200 flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-white/50 flex items-center justify-center">
-                    <span className="text-5xl">👩‍⚕️</span>
-                  </div>
-                  <p className="text-primary-700 font-medium">
-                    Здесь будет ваше
-                    <br />
-                    профессиональное фото
-                  </p>
-                  <p className="text-primary-500 text-sm mt-2">
-                    Рекомендуемый размер: 800×1000px
-                  </p>
-                </div>
-              </div>
+              <img
+                src="/photo-hero.jpg"
+                alt="Елена Сорокина — психолог, психотерапевт"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </div>
 
-            {/* Плавающая карточка — опыт */}
-            <div className="absolute -left-6 bottom-20 bg-white rounded-2xl shadow-card p-4 animate-fade-in">
+            {/* Плавающая карточка — опыт (слева внизу) */}
+            <div className="absolute -left-6 bottom-20 bg-white rounded-2xl shadow-card p-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
                   <span className="text-2xl">🎓</span>
@@ -103,8 +93,8 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Плавающая карточка — клиенты */}
-            <div className="absolute -right-4 top-16 bg-white rounded-2xl shadow-card p-4 animate-fade-in">
+            {/* Плавающая карточка — клиенты (справа, ВЫШЕ — top-4) */}
+            <div className="absolute -right-4 top-4 bg-white rounded-2xl shadow-card p-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center">
                   <span className="text-2xl">💛</span>

@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import {
   Brain,
   HeartCrack,
@@ -52,28 +49,8 @@ const problems = [
 ];
 
 export default function Problems() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("visible");
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    const elements = sectionRef.current?.querySelectorAll(".reveal");
-    elements?.forEach((el) => observer.observe(el));
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <section className="section-padding bg-white" ref={sectionRef} aria-label="С чем я работаю">
+    <section className="section-padding bg-white" aria-label="С чем я работаю">
       <Container>
         <SectionHeading
           title="Знакомо ли вам это?"
@@ -86,8 +63,7 @@ export default function Problems() {
             return (
               <div
                 key={index}
-                className="reveal card group cursor-default"
-                style={{ transitionDelay: `${index * 100}ms` }}
+                className="card group cursor-default"
               >
                 <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center mb-4 group-hover:bg-primary-100 transition-colors">
                   <Icon className="w-6 h-6 text-primary-600" />
@@ -103,7 +79,6 @@ export default function Problems() {
           })}
         </div>
 
-        {/* Эмпатийное сообщение */}
         <div className="mt-12 text-center">
           <p className="text-stone-500 text-lg italic max-w-2xl mx-auto">
             «Если вы узнали себя хотя бы в одном из этих описаний —

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import Container from "@/components/ui/Container";
@@ -19,10 +19,18 @@ interface PostPreview {
   created_at: string;
 }
 
+let cachedPosts: PostPreview[] | null = null;
+
 export default function BlogPreview() {
-  const [posts, setPosts] = useState<PostPreview[]>([]);
+  const [posts, setPosts] = useState<PostPreview[]>(
+    cachedPosts || getFallback()
+  );
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
+    if (fetchedRef.current || cachedPosts) return;
+    fetchedRef.current = true;
+
     async function fetchPosts() {
       try {
         const supabase = createClient();
@@ -34,35 +42,12 @@ export default function BlogPreview() {
           .order("created_at", { ascending: false })
           .limit(3);
 
-        if (error || !data || data.length === 0) {
-          // Фоллбэк на захардкоженные
-          setPosts(
-            fallbackPosts.slice(0, 3).map((p, i) => ({
-              id: String(i),
-              slug: p.slug,
-              title: p.title,
-              excerpt: p.excerpt,
-              category: p.category,
-              read_time: p.readTime,
-              created_at: p.date,
-            }))
-          );
-          return;
-        }
+        if (error || !data || data.length === 0) return;
 
+        cachedPosts = data as PostPreview[];
         setPosts(data as PostPreview[]);
       } catch {
-        setPosts(
-          fallbackPosts.slice(0, 3).map((p, i) => ({
-            id: String(i),
-            slug: p.slug,
-            title: p.title,
-            excerpt: p.excerpt,
-            category: p.category,
-            read_time: p.readTime,
-            created_at: p.date,
-          }))
-        );
+        // Используем фоллбэк
       }
     }
 
@@ -122,4 +107,16 @@ export default function BlogPreview() {
       </Container>
     </section>
   );
+}
+
+function getFallback(): PostPreview[] {
+  return fallbackPosts.slice(0, 3).map((p, i) => ({
+    id: String(i),
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    category: p.category,
+    read_time: p.readTime,
+    created_at: p.date,
+  }));
 }

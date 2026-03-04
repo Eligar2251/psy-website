@@ -8,12 +8,15 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
 
+interface AuthUser {
+  id: string;
+  email?: string;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   profile: Profile | null;
   isLoading: boolean;
   isAdmin: boolean;
@@ -30,60 +33,69 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
 });
 
+// Создаём клиент напрямую через @supabase/supabase-js чтобы избежать проблем с типами @supabase/ssr
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+function getSupabase() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const supabase = createClient();
-
-  const fetchProfile = useCallback(
-    async (userId: string) => {
-      const { data } = await supabase
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const sb = getSupabase();
+      const { data } = await sb
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
 
-      setProfile(data as Profile | null);
-    },
-    [supabase]
-  );
+      if (data) {
+        setProfile(data as Profile);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
+    if (user) await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Получаем начальную сессию
-    const getInitialSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    let active = true;
+    const sb = getSupabase();
 
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error("Auth error:", error);
-      } finally {
+    // Инициализация
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
+
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email });
+        fetchProfile(session.user.id).finally(() => {
+          if (active) setIsLoading(false);
+        });
+      } else {
         setIsLoading(false);
       }
-    };
+    });
 
-    getInitialSession();
-
-    // Слушаем изменения auth
+    // Подписка на изменения auth
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = sb.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
       if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
+        setUser({ id: session.user.id, email: session.user.email });
+        fetchProfile(session.user.id);
       } else {
         setUser(null);
         setProfile(null);
@@ -92,15 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = useCallback(async () => {
     setUser(null);
     setProfile(null);
-  };
+
+    try {
+      const sb = getSupabase();
+      await sb.auth.signOut();
+    } catch {
+      // ignore
+    }
+
+    window.location.href = "/";
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -119,9 +140,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
+  return useContext(AuthContext);
 }

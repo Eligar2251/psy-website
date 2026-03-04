@@ -1,16 +1,20 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createJsClient } from "@supabase/supabase-js";
+
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
 export function createClient() {
-  return createBrowserClient(
+  if (browserClient) return browserClient;
+
+  browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  return browserClient;
 }
 
-// Для обратной совместимости со старыми API-роутами
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-
-export const supabase = createSupabaseClient(
+export const supabase = createJsClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );

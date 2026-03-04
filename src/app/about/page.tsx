@@ -120,7 +120,7 @@ export default function AboutPage() {
             <div className="order-1 lg:order-2">
               <p className="text-primary-600 font-medium mb-3">Обо мне</p>
               <h1 className="text-stone-900 mb-6">
-                Привет, я Наталья
+                Привет, я Елена
               </h1>
               <div className="space-y-4 text-stone-600 leading-relaxed text-lg">
                 <p>

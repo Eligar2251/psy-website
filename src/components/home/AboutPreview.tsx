@@ -18,16 +18,11 @@ export default function AboutPreview() {
           {/* Фото */}
           <div className="relative">
             <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-card max-w-md mx-auto lg:mx-0">
-              <div className="absolute inset-0 bg-gradient-to-br from-warm-200 to-primary-100 flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-24 h-24 mx-auto mb-3 rounded-full bg-white/50 flex items-center justify-center">
-                    <span className="text-4xl">👩‍⚕️</span>
-                  </div>
-                  <p className="text-primary-700 text-sm font-medium">
-                    Фото психолога
-                  </p>
-                </div>
-              </div>
+              <img
+                src="/photo-about.jpg"
+                alt="Елена Сорокина — психолог"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </div>
 
             {/* Декоративный элемент */}
@@ -41,7 +36,7 @@ export default function AboutPreview() {
           <div>
             <p className="text-primary-600 font-medium mb-3">Обо мне</p>
             <h2 className="text-stone-900 mb-6">
-                Наталья Пакина
+              Елена Сорокина
             </h2>
 
             <div className="space-y-4 text-stone-600 leading-relaxed mb-8">

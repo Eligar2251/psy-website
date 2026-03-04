@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -15,69 +15,50 @@ interface Review {
   name: string;
 }
 
+// Кэш на уровне модуля
+let cachedReviews: Review[] | null = null;
+
 export default function ReviewsSlider() {
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(
+    cachedReviews || getFallback()
+  );
   const [current, setCurrent] = useState(0);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
+    if (fetchedRef.current || cachedReviews) return;
+    fetchedRef.current = true;
+
     async function fetchReviews() {
       try {
         const supabase = createClient();
 
         const { data, error } = await supabase
           .from("reviews")
-          .select(
-            `
-            id,
-            text,
-            rating,
-            service,
-            profiles (
-              full_name
-            )
-          `
-          )
+          .select("id, text, rating, service, profiles(full_name)")
           .eq("is_approved", true)
           .eq("is_visible", true)
           .order("created_at", { ascending: false })
           .limit(10);
 
-        if (error || !data || data.length === 0) {
-          // Фоллбэк
-          setReviews(
-            fallbackTestimonials.map((t) => ({
-              id: String(t.id),
-              text: t.text,
-              rating: t.rating,
-              service: t.service,
-              name: `${t.name}, ${t.age} лет`,
-            }))
-          );
-          return;
-        }
+        if (error || !data || data.length === 0) return;
 
-        setReviews(
-          data.map((r: Record<string, unknown>) => ({
+        const mapped: Review[] = data.map(
+          (r: Record<string, unknown>) => ({
             id: r.id as string,
             text: r.text as string,
             rating: r.rating as number,
             service: (r.service as string) || "",
             name:
-              (r.profiles as Record<string, unknown>)?.full_name as string ||
-              "Аноним",
-          }))
+              ((r.profiles as Record<string, unknown>)
+                ?.full_name as string) || "Аноним",
+          })
         );
+
+        cachedReviews = mapped;
+        setReviews(mapped);
       } catch {
-        // Фоллбэк при ошибке
-        setReviews(
-          fallbackTestimonials.map((t) => ({
-            id: String(t.id),
-            text: t.text,
-            rating: t.rating,
-            service: t.service,
-            name: `${t.name}, ${t.age} лет`,
-          }))
-        );
+        // Используем фоллбэк
       }
     }
 
@@ -108,11 +89,7 @@ export default function ReviewsSlider() {
               aria-hidden="true"
             />
 
-            {/* Звёзды */}
-            <div
-              className="flex gap-1 mb-6"
-              aria-label={`Оценка ${review.rating} из 5`}
-            >
+            <div className="flex gap-1 mb-6">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
@@ -125,12 +102,10 @@ export default function ReviewsSlider() {
               ))}
             </div>
 
-            {/* Текст */}
             <blockquote className="text-lg md:text-xl text-stone-700 leading-relaxed mb-8 relative z-10">
               &ldquo;{review.text}&rdquo;
             </blockquote>
 
-            {/* Автор */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-heading font-semibold text-stone-900">
@@ -141,7 +116,6 @@ export default function ReviewsSlider() {
                 )}
               </div>
 
-              {/* Навигация */}
               <div className="flex gap-2">
                 <button
                   onClick={prev}
@@ -161,7 +135,6 @@ export default function ReviewsSlider() {
             </div>
           </div>
 
-          {/* Индикаторы */}
           <div className="flex justify-center gap-2 mt-6">
             {reviews.map((_, index) => (
               <button
@@ -180,4 +153,14 @@ export default function ReviewsSlider() {
       </Container>
     </section>
   );
+}
+
+function getFallback(): Review[] {
+  return fallbackTestimonials.map((t) => ({
+    id: String(t.id),
+    text: t.text,
+    rating: t.rating,
+    service: t.service,
+    name: `${t.name}, ${t.age} лет`,
+  }));
 }

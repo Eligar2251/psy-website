@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import {
   Send,
   Loader2,
@@ -25,58 +25,54 @@ interface CommentData {
 }
 
 export default function CommentSection({ postId }: { postId: string }) {
-  const { user, profile, isLoading: authLoading, isAdmin } = useAuth();
+  const { user, isLoading: authLoading, isAdmin } = useAuth();
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const fetchedRef = useRef(false);
 
-  const supabase = createClient();
-
-  // Загрузка комментариев
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
     async function fetchComments() {
-      const { data } = await supabase
-        .from("comments")
-        .select(
-          `
-          id,
-          created_at,
-          content,
-          author_id,
-          profiles (
-            full_name
-          )
-        `
-        )
-        .eq("post_id", postId)
-        .eq("is_approved", true)
-        .order("created_at", { ascending: true });
+      try {
+        const supabase = createClient();
 
-      if (data) {
-        const mapped: CommentData[] = data.map(
-          (item: Record<string, unknown>) => ({
-            id: item.id as string,
-            created_at: item.created_at as string,
-            content: item.content as string,
-            author_id: item.author_id as string,
-            profiles: item.profiles as { full_name: string } | null,
-          })
-        );
-        setComments(mapped);
+        const { data } = await supabase
+          .from("comments")
+          .select("id, created_at, content, author_id, profiles(full_name)")
+          .eq("post_id", postId)
+          .eq("is_approved", true)
+          .order("created_at", { ascending: true });
+
+        if (data) {
+          const mapped: CommentData[] = data.map(
+            (item: Record<string, unknown>) => ({
+              id: item.id as string,
+              created_at: item.created_at as string,
+              content: item.content as string,
+              author_id: item.author_id as string,
+              profiles: item.profiles as { full_name: string } | null,
+            })
+          );
+          setComments(mapped);
+        }
+      } catch {
+        // Молча
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     }
 
     fetchComments();
-  }, [postId, supabase]);
+  }, [postId]);
 
-  // Отправка комментария
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || isSending) return;
 
     setIsSending(true);
     setError("");
@@ -85,10 +81,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          post_id: postId,
-          content: newComment.trim(),
-        }),
+        body: JSON.stringify({ post_id: postId, content: newComment.trim() }),
       });
 
       const data = await res.json();
@@ -106,7 +99,6 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
-  // Удаление комментария
   const handleDelete = async (commentId: string) => {
     if (!confirm("Удалить комментарий?")) return;
 
@@ -119,7 +111,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
       }
     } catch {
-      alert("Ошибка удаления");
+      // Молча
     }
   };
 
@@ -135,7 +127,6 @@ export default function CommentSection({ postId }: { postId: string }) {
         )}
       </h3>
 
-      {/* Список комментариев */}
       {isLoading ? (
         <div className="flex items-center gap-2 text-stone-400 mb-8">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -153,9 +144,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center">
                       <span className="text-primary-700 text-xs font-semibold">
-                        {(
-                          comment.profiles?.full_name || "А"
-                        )[0].toUpperCase()}
+                        {(comment.profiles?.full_name || "А")[0].toUpperCase()}
                       </span>
                     </div>
                     <span className="font-medium text-stone-900 text-sm">
@@ -164,11 +153,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                     <span className="text-xs text-stone-400">
                       {new Date(comment.created_at).toLocaleDateString(
                         "ru-RU",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        }
+                        { day: "numeric", month: "short", year: "numeric" }
                       )}
                     </span>
                   </div>
@@ -177,12 +162,10 @@ export default function CommentSection({ postId }: { postId: string }) {
                   </p>
                 </div>
 
-                {/* Удаление (автор или админ) */}
                 {(user?.id === comment.author_id || isAdmin) && (
                   <button
                     onClick={() => handleDelete(comment.id)}
                     className="p-1.5 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-                    title="Удалить"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -197,23 +180,17 @@ export default function CommentSection({ postId }: { postId: string }) {
         </p>
       )}
 
-      {/* Форма комментария */}
       {authLoading ? null : user ? (
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">
-              Ваш комментарий
-            </label>
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={3}
-              required
-              maxLength={2000}
-              placeholder="Напишите комментарий..."
-              className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all resize-none"
-            />
-          </div>
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            rows={3}
+            required
+            maxLength={2000}
+            placeholder="Напишите комментарий..."
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all resize-none"
+          />
 
           {error && (
             <div className="flex items-center gap-2 text-red-600 text-sm">
@@ -243,9 +220,7 @@ export default function CommentSection({ postId }: { postId: string }) {
             Войдите, чтобы оставить комментарий
           </p>
           <div className="flex gap-2 justify-center">
-            <Button href="/auth/login" size="sm">
-              Войти
-            </Button>
+            <Button href="/auth/login" size="sm">Войти</Button>
             <Button href="/auth/register" variant="outline" size="sm">
               Регистрация
             </Button>
