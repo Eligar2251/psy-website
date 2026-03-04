@@ -19,7 +19,7 @@ export async function createServerSupabase() {
             cookieStore.set(name, value, options)
           );
         } catch {
-          // в server components нельзя сетить cookies
+          // server components: иногда нельзя сетить cookies
         }
       },
     },
@@ -34,17 +34,17 @@ export async function getCurrentUser(): Promise<{
     const supabase = await createServerSupabase();
     const { data } = await supabase.auth.getUser();
 
-    const user = data.user;
-    if (!user) return { user: null, profile: null };
+    const u = data.user;
+    if (!u) return { user: null, profile: null };
 
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", u.id)
       .maybeSingle();
 
     return {
-      user: { id: user.id, email: user.email },
+      user: { id: u.id, email: u.email },
       profile: (profile as Profile) ?? null,
     };
   } catch {

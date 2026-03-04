@@ -1,14 +1,13 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type GlobalWithSupabase = typeof globalThis & {
-  __psySupabase?: SupabaseClient;
+type GlobalWithSB = typeof globalThis & {
+  __psy_sb__?: SupabaseClient;
 };
 
 export function createClient(): SupabaseClient {
-  const g = globalThis as GlobalWithSupabase;
-
-  if (g.__psySupabase) return g.__psySupabase;
+  const g = globalThis as GlobalWithSB;
+  if (g.__psy_sb__) return g.__psy_sb__;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -19,15 +18,15 @@ export function createClient(): SupabaseClient {
     );
   }
 
-  g.__psySupabase = createSupabaseClient(url, anon, {
+  g.__psy_sb__ = createBrowserClient(url, anon, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      // чтобы не появлялись sb-xxx-auth-token:1 :2 :3
+      // фикс, чтобы не плодились токены :1 :2 :3
       storageKey: "psy-website-auth",
     },
   });
 
-  return g.__psySupabase;
+  return g.__psy_sb__;
 }

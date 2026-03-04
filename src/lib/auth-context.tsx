@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(
     async (uid: string, email?: string) => {
       try {
-        // 1) пробуем получить профиль
         const { data: p1 } = await sb
           .from("profiles")
           .select("*")
@@ -55,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // 2) если профиля нет — создаём (нужно, чтобы policy profiles_insert_own была)
+        // если профиля нет — создаём (требуется policy profiles_insert_own)
         await sb.from("profiles").insert({
           id: uid,
           email: email ?? "",
@@ -63,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: "user",
         });
 
-        // 3) читаем ещё раз
         const { data: p2 } = await sb
           .from("profiles")
           .select("*")
@@ -72,18 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setProfile((p2 as Profile) ?? null);
       } catch {
-        // если что-то пошло не так — не ломаем UI
         setProfile(null);
       }
     },
     [sb]
   );
 
-  const applySessionFast = useCallback(
+  const applySession = useCallback(
     (session: Session | null) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email });
-        // профайл грузим в фоне, НЕ блокируем UI
         void loadProfile(session.user.id, session.user.email ?? undefined);
       } else {
         setUser(null);
@@ -97,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
 
-    // страховка от вечной загрузки (если сеть/расширения ломают storage)
+    // страховка от вечной загрузки
     const t = setTimeout(() => {
       if (alive) setIsLoading(false);
     }, 1500);
@@ -106,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await sb.auth.getSession();
         if (!alive) return;
-        applySessionFast(data.session);
+        applySession(data.session);
       } catch {
         if (alive) setIsLoading(false);
       } finally {
@@ -116,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       if (!alive) return;
-      applySessionFast(session);
+      applySession(session);
     });
 
     return () => {
@@ -124,16 +120,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(t);
       sub.subscription.unsubscribe();
     };
-  }, [sb, applySessionFast]);
+  }, [sb, applySession]);
 
   const signOut = useCallback(async () => {
     setUser(null);
     setProfile(null);
-    try {
-      await sb.auth.signOut();
-    } finally {
-      window.location.href = "/";
-    }
+    await sb.auth.signOut();
+    window.location.href = "/";
   }, [sb]);
 
   const refreshProfile = useCallback(async () => {
