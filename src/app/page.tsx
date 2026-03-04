@@ -35,7 +35,7 @@ export default function HomePage() {
             address: {
               "@type": "PostalAddress",
               streetAddress: "ул. Примерная, д. 10, каб. 205",
-              addressLocality: "Новосибирск",
+              addressLocality: "Москва",
               addressCountry: "RU",
             },
             openingHours: "Mo-Fr 09:00-20:00, Sa 10:00-16:00",
