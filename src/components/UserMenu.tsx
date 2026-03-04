@@ -19,7 +19,6 @@ export default function UserMenu() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,16 +31,22 @@ export default function UserMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Скелетон
+  // 1) LOADING: показываем кликабельную кнопку (не div!)
   if (isLoading) {
     return (
-      <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center">
-        <Loader2 className="w-4 h-4 text-stone-400 animate-spin" />
-      </div>
+      <button
+        type="button"
+        onClick={() => router.push("/auth/login")}
+        className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 transition-colors"
+        aria-label="Войти"
+        title="Войти"
+      >
+        <Loader2 className="w-4 h-4 text-stone-500 animate-spin" />
+      </button>
     );
   }
 
-  // НЕ авторизован: показываем кнопку "Войти"
+  // 2) НЕ авторизован
   if (!user) {
     return (
       <button
@@ -55,10 +60,11 @@ export default function UserMenu() {
     );
   }
 
+  // 3) Авторизован
   const name = profile?.full_name || user.email?.split("@")[0] || "User";
   const initial = name[0]?.toUpperCase() || "U";
 
-  const handleGoDashboard = () => {
+  const goDashboard = () => {
     setIsOpen(false);
     router.push("/dashboard");
   };
@@ -67,7 +73,7 @@ export default function UserMenu() {
     if (isSigningOut) return;
     setIsSigningOut(true);
     setIsOpen(false);
-    await signOut(); // signOut у вас делает window.location.href="/"
+    await signOut();
   };
 
   return (
@@ -79,19 +85,18 @@ export default function UserMenu() {
           "flex items-center gap-2 px-2 py-1.5 rounded-xl transition-colors",
           isOpen ? "bg-primary-50" : "hover:bg-stone-100"
         )}
-        aria-expanded={isOpen}
       >
         <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center">
           <span className="text-white text-sm font-semibold">{initial}</span>
         </div>
 
-        <span className="hidden md:block text-sm font-medium text-stone-700 max-w-[120px] truncate">
+        <span className="hidden md:block text-sm font-medium text-stone-700 max-w-[140px] truncate">
           {name}
         </span>
 
         <ChevronDown
           className={clsx(
-            "hidden md:block w-4 h-4 text-stone-400 transition-transform duration-200",
+            "hidden md:block w-4 h-4 text-stone-400 transition-transform",
             isOpen && "rotate-180"
           )}
         />
@@ -102,7 +107,6 @@ export default function UserMenu() {
           <div className="px-4 py-3 border-b border-stone-100">
             <p className="text-sm font-medium text-stone-900 truncate">{name}</p>
             <p className="text-xs text-stone-400 truncate">{user.email}</p>
-
             {isAdmin && (
               <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-medium">
                 <Shield className="w-3 h-3" />
@@ -114,7 +118,7 @@ export default function UserMenu() {
           <div className="py-1">
             <button
               type="button"
-              onClick={handleGoDashboard}
+              onClick={goDashboard}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
             >
               <LayoutDashboard className="w-4 h-4 text-stone-400" />
