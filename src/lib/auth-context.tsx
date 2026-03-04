@@ -9,6 +9,8 @@ import {
   ReactNode,
 } from "react";
 import type { Profile } from "@/lib/types";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import type { Session } from "@supabase/supabase-js";
 
 interface AuthUser {
   id: string;
@@ -33,95 +35,73 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
 });
 
-// Создаём клиент напрямую через @supabase/supabase-js чтобы избежать проблем с типами @supabase/ssr
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-
-function getSupabase() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const sb = getSupabaseBrowser();
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const sb = getSupabase();
-      const { data } = await sb
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      const { data } = await sb.from("profiles").select("*").eq("id", userId).single();
+      if (data) setProfile(data as Profile);
+    },
+    [sb]
+  );
 
-      if (data) {
-        setProfile(data as Profile);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
-
-  useEffect(() => {
-    let active = true;
-    const sb = getSupabase();
-
-    // Инициализация
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (!active) return;
-
+  const applySession = useCallback(
+    async (session: Session | null) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email });
-        fetchProfile(session.user.id).finally(() => {
-          if (active) setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    // Подписка на изменения auth
-    const {
-      data: { subscription },
-    } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email });
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         setUser(null);
         setProfile(null);
       }
       setIsLoading(false);
+    },
+    [fetchProfile]
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        const { data } = await sb.auth.getSession();
+        if (!alive) return;
+        await applySession(data.session);
+      } catch {
+        if (alive) setIsLoading(false);
+      }
+    })();
+
+    const { data: sub } = sb.auth.onAuthStateChange(async (_event, session) => {
+      if (!alive) return;
+      await applySession(session);
     });
 
     return () => {
-      active = false;
-      subscription.unsubscribe();
+      alive = false;
+      sub.subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [sb, applySession]);
 
   const signOut = useCallback(async () => {
+    // UI сброс сразу
     setUser(null);
     setProfile(null);
 
-    try {
-      const sb = getSupabase();
-      await sb.auth.signOut();
-    } catch {
-      // ignore
-    }
+    await sb.auth.signOut();
 
+    // надежный выход без “зависаний”
     window.location.href = "/";
-  }, []);
+  }, [sb]);
+
+  const refreshProfile = useCallback(async () => {
+    if (user) await fetchProfile(user.id);
+  }, [user, fetchProfile]);
 
   return (
     <AuthContext.Provider

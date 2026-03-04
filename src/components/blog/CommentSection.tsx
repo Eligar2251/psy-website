@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 interface CommentData {
   id: string;
@@ -39,7 +39,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
     async function fetchComments() {
       try {
-        const supabase = createClient();
+        const supabase = getSupabaseBrowser();
 
         const { data } = await supabase
           .from("comments")

@@ -100,19 +100,11 @@ export default function AboutPage() {
             {/* Фото */}
             <div className="relative order-2 lg:order-1">
               <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-elevated max-w-lg mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-200 to-warm-200 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-white/50 flex items-center justify-center">
-                      <span className="text-5xl">👩‍⚕️</span>
-                    </div>
-                    <p className="text-primary-700 font-medium">
-                      Профессиональное фото
-                    </p>
-                    <p className="text-primary-500 text-sm mt-1">
-                      800×1060px рекомендуется
-                    </p>
-                  </div>
-                </div>
+                <img
+                  src="/photo-about.jpg"
+                  alt="Елена Соколова — психолог"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               </div>
             </div>
 

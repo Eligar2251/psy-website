@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, Loader2, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 export default function ReviewModerateActions({
   reviewId,
@@ -14,7 +14,7 @@ export default function ReviewModerateActions({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = getSupabaseBrowser();
 
   const handleApprove = async () => {
     setIsLoading(true);

@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import { testimonials as fallbackTestimonials } from "@/lib/data";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 interface Review {
   id: string;
@@ -31,7 +31,7 @@ export default function ReviewsSlider() {
 
     async function fetchReviews() {
       try {
-        const supabase = createClient();
+        const supabase = getSupabaseBrowser();
 
         const { data, error } = await supabase
           .from("reviews")

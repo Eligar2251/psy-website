@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { useAuth } from "@/lib/auth-context";
 import type { Profile } from "@/lib/types";
 
@@ -22,7 +22,7 @@ export default function ProfileSettingsForm({
     setStatus("loading");
 
     try {
-      const supabase = createClient();
+      const supabase = getSupabaseBrowser();
 
       const { error } = await supabase
         .from("profiles")

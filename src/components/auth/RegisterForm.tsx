@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   UserPlus,
@@ -13,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 export default function RegisterForm() {
   const [form, setForm] = useState({
@@ -22,10 +21,10 @@ export default function RegisterForm() {
     password: "",
     passwordConfirm: "",
   });
+
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -34,21 +33,19 @@ export default function RegisterForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
     setIsLoading(true);
 
-    // Валидация
     if (form.name.trim().length < 2) {
       setError("Имя должно содержать минимум 2 символа");
       setIsLoading(false);
       return;
     }
-
     if (form.password.length < 6) {
       setError("Пароль должен содержать минимум 6 символов");
       setIsLoading(false);
       return;
     }
-
     if (form.password !== form.passwordConfirm) {
       setError("Пароли не совпадают");
       setIsLoading(false);
@@ -56,20 +53,18 @@ export default function RegisterForm() {
     }
 
     try {
-      const supabase = createClient();
+      const supabase = getSupabaseBrowser();
 
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
         options: {
-          data: {
-            full_name: form.name.trim(),
-          },
+          data: { full_name: form.name.trim() },
         },
       });
 
       if (authError) {
-        if (authError.message.includes("already registered")) {
+        if (authError.message.toLowerCase().includes("already registered")) {
           setError("Этот email уже зарегистрирован");
         } else {
           setError(authError.message);
@@ -77,13 +72,15 @@ export default function RegisterForm() {
         return;
       }
 
-      setSuccess(true);
+      // Если подтверждение email выключено, часто session уже есть
+      if (data.session) {
+        window.location.href = "/";
+        return;
+      }
 
-      // Автоматический вход через 2 секунды
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 2000);
+      setSuccessMsg(
+        "Аккаунт создан! Если включено подтверждение email — проверьте почту."
+      );
     } catch {
       setError("Ошибка соединения. Попробуйте позже");
     } finally {
@@ -91,15 +88,22 @@ export default function RegisterForm() {
     }
   };
 
-  if (success) {
+  if (successMsg) {
     return (
       <div className="text-center py-6">
         <CheckCircle className="w-16 h-16 text-primary-500 mx-auto mb-4" />
         <h3 className="text-xl font-heading font-semibold text-stone-900 mb-2">
-          Аккаунт создан!
+          Готово!
         </h3>
-        <p className="text-stone-500">
-          Добро пожаловать! Перенаправляем вас...
+        <p className="text-stone-500">{successMsg}</p>
+        <p className="text-sm text-stone-500 mt-4">
+          Уже есть аккаунт?{" "}
+          <Link
+            href="/auth/login"
+            className="text-primary-600 font-medium hover:underline"
+          >
+            Войти
+          </Link>
         </p>
       </div>
     );
@@ -107,7 +111,6 @@ export default function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-      {/* Имя */}
       <div>
         <label
           htmlFor="register-name"
@@ -131,7 +134,6 @@ export default function RegisterForm() {
         </div>
       </div>
 
-      {/* Email */}
       <div>
         <label
           htmlFor="register-email"
@@ -154,7 +156,6 @@ export default function RegisterForm() {
         </div>
       </div>
 
-      {/* Пароль */}
       <div>
         <label
           htmlFor="register-password"
@@ -178,7 +179,6 @@ export default function RegisterForm() {
         </div>
       </div>
 
-      {/* Подтверждение пароля */}
       <div>
         <label
           htmlFor="register-password-confirm"
@@ -202,7 +202,6 @@ export default function RegisterForm() {
         </div>
       </div>
 
-      {/* Ошибка */}
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -210,7 +209,6 @@ export default function RegisterForm() {
         </div>
       )}
 
-      {/* Согласие */}
       <p className="text-xs text-stone-400 leading-relaxed">
         Регистрируясь, вы соглашаетесь с{" "}
         <Link href="/privacy" className="text-primary-600 hover:underline">
@@ -218,13 +216,7 @@ export default function RegisterForm() {
         </Link>
       </p>
 
-      {/* Кнопка */}
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full"
-        size="lg"
-      >
+      <Button type="submit" disabled={isLoading} className="w-full" size="lg">
         {isLoading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -238,7 +230,6 @@ export default function RegisterForm() {
         )}
       </Button>
 
-      {/* Ссылка на вход */}
       <p className="text-center text-sm text-stone-500">
         Уже есть аккаунт?{" "}
         <Link

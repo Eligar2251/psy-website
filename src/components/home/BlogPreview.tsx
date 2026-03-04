@@ -6,7 +6,7 @@ import { ArrowRight, Clock } from "lucide-react";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Button from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { blogPosts as fallbackPosts } from "@/lib/data";
 
 interface PostPreview {
@@ -33,7 +33,7 @@ export default function BlogPreview() {
 
     async function fetchPosts() {
       try {
-        const supabase = createClient();
+        const supabase = getSupabaseBrowser();
 
         const { data, error } = await supabase
           .from("posts")

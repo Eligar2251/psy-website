@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LogIn, Loader2, AlertCircle, Mail, Lock } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
+      const supabase = getSupabaseBrowser();
 
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -30,18 +31,18 @@ export default function LoginForm() {
       });
 
       if (authError) {
-        if (authError.message.includes("Invalid login credentials")) {
+        if (authError.message.toLowerCase().includes("invalid login credentials")) {
           setError("Неверный email или пароль");
-        } else if (authError.message.includes("Email not confirmed")) {
-          setError("Подтвердите email. Проверьте почту");
+        } else if (authError.message.toLowerCase().includes("email not confirmed")) {
+          setError("Email не подтверждён. Проверьте почту.");
         } else {
           setError(authError.message);
         }
         return;
       }
 
-      router.push(redirect);
-      router.refresh();
+      // Важно: надёжный переход с полной синхронизацией состояния
+      window.location.href = redirect;
     } catch {
       setError("Ошибка соединения. Попробуйте позже");
     } finally {
@@ -51,7 +52,6 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-      {/* Email */}
       <div>
         <label
           htmlFor="login-email"
@@ -73,7 +73,6 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Пароль */}
       <div>
         <label
           htmlFor="login-password"
@@ -96,7 +95,6 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Ошибка */}
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -104,13 +102,7 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Кнопка */}
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full"
-        size="lg"
-      >
+      <Button type="submit" disabled={isLoading} className="w-full" size="lg">
         {isLoading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -124,7 +116,6 @@ export default function LoginForm() {
         )}
       </Button>
 
-      {/* Ссылка на регистрацию */}
       <p className="text-center text-sm text-stone-500">
         Нет аккаунта?{" "}
         <Link
