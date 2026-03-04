@@ -4,14 +4,13 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   useCallback,
   ReactNode,
 } from "react";
 import type { Profile } from "@/lib/types";
 import { createClient } from "@/lib/supabase";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
 type AuthUser = { id: string; email?: string };
 
@@ -34,16 +33,21 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const sb = useMemo(() => createClient(), []);
+  const [sb, setSb] = useState<SupabaseClient | null>(null);
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // создаём клиента строго на клиенте
+  useEffect(() => {
+    setSb(createClient());
+  }, []);
+
   const loadProfile = useCallback(
-    async (uid: string, email?: string) => {
+    async (client: SupabaseClient, uid: string, email?: string) => {
       try {
-        const { data: p1 } = await sb
+        const { data: p1 } = await client
           .from("profiles")
           .select("*")
           .eq("id", uid)
@@ -54,15 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // если профиля нет — создаём (требуется policy profiles_insert_own)
-        await sb.from("profiles").insert({
+        // если нет профиля — создаём (нужна policy profiles_insert_own)
+        await client.from("profiles").insert({
           id: uid,
           email: email ?? "",
           full_name: "",
           role: "user",
         });
 
-        const { data: p2 } = await sb
+        const { data: p2 } = await client
           .from("profiles")
           .select("*")
           .eq("id", uid)
@@ -73,14 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
     },
-    [sb]
+    []
   );
 
   const applySession = useCallback(
-    (session: Session | null) => {
+    (client: SupabaseClient, session: Session | null) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email });
-        void loadProfile(session.user.id, session.user.email ?? undefined);
+        void loadProfile(client, session.user.id, session.user.email ?? undefined);
       } else {
         setUser(null);
         setProfile(null);
@@ -91,33 +95,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    let alive = true;
+    if (!sb) return;
 
-    // страховка от вечной загрузки
-    const t = setTimeout(() => {
-      if (alive) setIsLoading(false);
-    }, 1500);
+    let alive = true;
 
     (async () => {
       try {
         const { data } = await sb.auth.getSession();
         if (!alive) return;
-        applySession(data.session);
+        applySession(sb, data.session);
       } catch {
         if (alive) setIsLoading(false);
-      } finally {
-        clearTimeout(t);
       }
     })();
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       if (!alive) return;
-      applySession(session);
+      applySession(sb, session);
     });
 
     return () => {
       alive = false;
-      clearTimeout(t);
       sub.subscription.unsubscribe();
     };
   }, [sb, applySession]);
@@ -125,14 +123,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setUser(null);
     setProfile(null);
-    await sb.auth.signOut();
+
+    if (sb) {
+      await sb.auth.signOut();
+    }
+
     window.location.href = "/";
   }, [sb]);
 
   const refreshProfile = useCallback(async () => {
-    if (!user) return;
-    await loadProfile(user.id, user.email);
-  }, [user, loadProfile]);
+    if (!sb || !user) return;
+    await loadProfile(sb, user.id, user.email);
+  }, [sb, user, loadProfile]);
 
   return (
     <AuthContext.Provider
