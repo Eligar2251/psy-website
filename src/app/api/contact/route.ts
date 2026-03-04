@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase-server-client";
 import { sendTelegramNotification } from "@/lib/telegram";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
 
     const name = String(body.name || "").trim();
     const email = String(body.email || "").trim();
@@ -19,17 +19,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Сохраняем в Supabase
-    await supabase.from("contact_messages").insert({
+    const supabase = getSupabaseServerClient();
+
+    const { error: dbError } = await supabase.from("contact_messages").insert({
       name,
       email,
-      phone: phone || null,
-      subject: subject || null,
+      phone: phone || "",
+      subject: subject || "",
       message,
     });
 
-    // Уведомление в Telegram
-    await sendTelegramNotification({
+    if (dbError) console.error("Supabase contact insert error:", dbError);
+
+    const tg = await sendTelegramNotification({
       name,
       phone: phone || "не указан",
       email,
@@ -38,14 +40,21 @@ export async function POST(request: NextRequest) {
       message,
     });
 
+    if (!tg.ok) console.error("Telegram error:", tg.error);
+
+    if (!dbError || tg.ok) {
+      return NextResponse.json(
+        { success: true, message: "Сообщение отправлено!" },
+        { status: 201 }
+      );
+    }
+
     return NextResponse.json(
-      { success: true, message: "Сообщение отправлено!" },
-      { status: 201 }
-    );
-  } catch {
-    return NextResponse.json(
-      { error: "Ошибка сервера" },
+      { error: "Ошибка сервера. Попробуйте позже." },
       { status: 500 }
     );
+  } catch (e) {
+    console.error("Contact route fatal error:", e);
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }

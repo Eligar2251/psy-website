@@ -21,8 +21,9 @@ export default function LoginPage() {
               Войдите, чтобы оставлять комментарии и отзывы
             </p>
           </div>
+
           <div className="card">
-            <Suspense fallback={<div className="py-8 text-center text-stone-400">Загрузка...</div>}>
+            <Suspense fallback={<div className="py-6 text-center text-stone-400">Загрузка...</div>}>
               <LoginForm />
             </Suspense>
           </div>

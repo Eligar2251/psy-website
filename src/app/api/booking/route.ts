@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase-server-client";
 import { sendTelegramNotification } from "@/lib/telegram";
 
-// Тип для заявки
 interface BookingInsert {
   name: string;
   phone: string;
@@ -11,36 +10,8 @@ interface BookingInsert {
   format: string;
   preferred_time?: string;
   message?: string;
-  source?: string;
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
 }
 
-// Простая rate-limit защита
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const windowMs = 15 * 60 * 1000;
-  const maxRequests = 5;
-
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-
-  if (entry.count >= maxRequests) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
-}
-
-// Валидация
 function validateBooking(data: Record<string, unknown>): {
   valid: boolean;
   errors: string[];
@@ -56,12 +27,7 @@ function validateBooking(data: Record<string, unknown>): {
   const preferred_time = String(data.preferred_time || "").trim();
   const message = String(data.message || "").trim();
 
-  if (!name || name.length < 2) {
-    errors.push("Имя должно содержать минимум 2 символа");
-  }
-  if (name.length > 100) {
-    errors.push("Имя слишком длинное");
-  }
+  if (!name || name.length < 2) errors.push("Имя должно быть минимум 2 символа");
 
   const phoneClean = phone.replace(/[\s\-\(\)]/g, "");
   if (!phoneClean || !/^[\+]?[0-9]{10,15}$/.test(phoneClean)) {
@@ -72,21 +38,11 @@ function validateBooking(data: Record<string, unknown>): {
     errors.push("Некорректный email");
   }
 
-  if (!service) {
-    errors.push("Выберите услугу");
-  }
+  if (!service) errors.push("Выберите услугу");
+  if (!format) errors.push("Выберите формат");
+  if (message.length > 1000) errors.push("Сообщение слишком длинное");
 
-  if (!format) {
-    errors.push("Выберите формат");
-  }
-
-  if (message.length > 1000) {
-    errors.push("Сообщение слишком длинное (макс. 1000 символов)");
-  }
-
-  if (errors.length > 0) {
-    return { valid: false, errors, cleaned: null };
-  }
+  if (errors.length) return { valid: false, errors, cleaned: null };
 
   return {
     valid: true,
@@ -105,19 +61,7 @@ function validateBooking(data: Record<string, unknown>): {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
-
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json(
-        { error: "Слишком много запросов. Попробуйте позже." },
-        { status: 429 }
-      );
-    }
-
-    const body = await request.json();
-
+    const body = (await request.json()) as Record<string, unknown>;
     const { valid, errors, cleaned } = validateBooking(body);
 
     if (!valid || !cleaned) {
@@ -127,7 +71,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Сохранение в Supabase
+    const supabase = getSupabaseServerClient();
+
+    // 1) Пишем в БД (если упадёт — всё равно попробуем Telegram)
     const { error: dbError } = await supabase.from("bookings").insert({
       ...cleaned,
       source: "website",
@@ -136,31 +82,33 @@ export async function POST(request: NextRequest) {
       utm_campaign: String(body.utm_campaign || ""),
     });
 
-    if (dbError) {
-      console.error("Supabase error:", dbError);
-    }
+    if (dbError) console.error("Supabase bookings insert error:", dbError);
 
-    // Отправка в Telegram
-    const telegramSent = await sendTelegramNotification(cleaned);
+    // 2) Telegram
+    const tg = await sendTelegramNotification(cleaned);
+    if (!tg.ok) console.error("Telegram error:", tg.error);
 
-    if (dbError && !telegramSent) {
+    // Если хотя бы один канал сработал — считаем успехом
+    if (!dbError || tg.ok) {
       return NextResponse.json(
-        { error: "Не удалось отправить заявку. Позвоните нам." },
-        { status: 500 }
+        {
+          success: true,
+          message:
+            "Заявка принята! Я свяжусь с вами в ближайшее время.",
+        },
+        { status: 201 }
       );
     }
 
+    // Если упало и БД, и Telegram — 500
     return NextResponse.json(
-      {
-        success: true,
-        message: "Заявка принята! Мы свяжемся с вами в ближайшее время.",
-      },
-      { status: 201 }
+      { error: "Ошибка сервера. Попробуйте позже." },
+      { status: 500 }
     );
-  } catch (error) {
-    console.error("Booking API error:", error);
+  } catch (e) {
+    console.error("Booking route fatal error:", e);
     return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
+      { error: "Ошибка сервера" },
       { status: 500 }
     );
   }

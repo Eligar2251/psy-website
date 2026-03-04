@@ -1,5 +1,3 @@
-// Отправка уведомления в Telegram при новой заявке
-
 interface TelegramBooking {
   name: string;
   phone: string;
@@ -12,27 +10,26 @@ interface TelegramBooking {
 
 export async function sendTelegramNotification(
   booking: TelegramBooking
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!botToken || !chatId) {
-    console.warn("Telegram credentials not configured");
-    return false;
+    return { ok: false, error: "Telegram env vars are missing" };
   }
 
   const text = `
-🆕 <b>Новая заявка на консультацию!</b>
+Новая заявка с сайта
 
-👤 <b>Имя:</b> ${escapeHtml(booking.name)}
-📞 <b>Телефон:</b> ${escapeHtml(booking.phone)}
-${booking.email ? `📧 <b>Email:</b> ${escapeHtml(booking.email)}` : ""}
-🛠 <b>Услуга:</b> ${escapeHtml(booking.service)}
-📋 <b>Формат:</b> ${escapeHtml(booking.format)}
-${booking.preferred_time ? `🕐 <b>Удобное время:</b> ${escapeHtml(booking.preferred_time)}` : ""}
-${booking.message ? `💬 <b>Сообщение:</b> ${escapeHtml(booking.message)}` : ""}
+Имя: ${escapeHtml(booking.name)}
+Телефон: ${escapeHtml(booking.phone)}
+${booking.email ? `Email: ${escapeHtml(booking.email)}` : ""}
+Услуга: ${escapeHtml(booking.service)}
+Формат: ${escapeHtml(booking.format)}
+${booking.preferred_time ? `Время: ${escapeHtml(booking.preferred_time)}` : ""}
+${booking.message ? `Сообщение: ${escapeHtml(booking.message)}` : ""}
 
-⏰ <i>${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}</i>
+${new Date().toLocaleString("ru-RU")}
   `.trim();
 
   try {
@@ -44,21 +41,21 @@ ${booking.message ? `💬 <b>Сообщение:</b> ${escapeHtml(booking.messag
         body: JSON.stringify({
           chat_id: chatId,
           text,
-          parse_mode: "HTML",
         }),
       }
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("Telegram API error:", error);
-      return false;
+      const errText = await response.text();
+      return { ok: false, error: `Telegram API error: ${errText}` };
     }
 
-    return true;
-  } catch (error) {
-    console.error("Failed to send Telegram notification:", error);
-    return false;
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Unknown telegram error",
+    };
   }
 }
 
