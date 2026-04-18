@@ -83,9 +83,9 @@ export default function ReviewsSlider() {
         />
 
         <div className="relative">
-          <div className="bg-warm-50 rounded-3xl p-8 md:p-12 relative">
+          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 md:p-12 relative border border-white/40 shadow-glass">
             <Quote
-              className="absolute top-6 left-6 w-10 h-10 text-primary-100"
+              className="absolute top-6 left-6 w-12 h-12 text-primary-200/50"
               aria-hidden="true"
             />
 
@@ -93,9 +93,9 @@ export default function ReviewsSlider() {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-5 h-5 ${
+                  className={`w-5 h-5 transition-all duration-300 ${
                     i < review.rating
-                      ? "text-accent-400 fill-accent-400"
+                      ? "text-accent-400 fill-accent-400 drop-shadow-sm"
                       : "text-stone-200"
                   }`}
                 />
@@ -112,21 +112,21 @@ export default function ReviewsSlider() {
                   {review.name}
                 </p>
                 {review.service && (
-                  <p className="text-sm text-stone-400">{review.service}</p>
+                  <p className="text-sm text-stone-500">{review.service}</p>
                 )}
               </div>
 
               <div className="flex gap-2">
                 <button
                   onClick={prev}
-                  className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-stone-400 hover:text-primary-600 hover:shadow-md transition-all"
+                  className="w-10 h-10 rounded-xl bg-white/80 backdrop-blur-sm shadow-glass flex items-center justify-center text-stone-400 hover:text-primary-600 hover:shadow-glass-hover hover:-translate-y-0.5 transition-all duration-300"
                   aria-label="Предыдущий отзыв"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={next}
-                  className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-stone-400 hover:text-primary-600 hover:shadow-md transition-all"
+                  className="w-10 h-10 rounded-xl bg-white/80 backdrop-blur-sm shadow-glass flex items-center justify-center text-stone-400 hover:text-primary-600 hover:shadow-glass-hover hover:-translate-y-0.5 transition-all duration-300"
                   aria-label="Следующий отзыв"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -140,10 +140,10 @@ export default function ReviewsSlider() {
               <button
                 key={index}
                 onClick={() => setCurrent(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-all duration-300 ${
                   index === current
-                    ? "bg-primary-600 w-6"
-                    : "bg-stone-300 hover:bg-stone-400"
+                    ? "bg-gradient-to-r from-primary-600 to-primary-500 w-8 shadow-sm"
+                    : "bg-stone-300 hover:bg-primary-300 w-2"
                 }`}
                 aria-label={`Отзыв ${index + 1}`}
               />

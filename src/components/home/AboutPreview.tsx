@@ -12,22 +12,26 @@ const credentials = [
 
 export default function AboutPreview() {
   return (
-    <section className="section-padding bg-white" aria-label="Обо мне">
+    <section className="section-padding bg-white/50 backdrop-blur-sm" aria-label="Обо мне">
       <Container>
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Фото */}
-          <div className="relative">
-            <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-card max-w-md mx-auto lg:mx-0">
+          <div className="relative group">
+            <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-glass max-w-md mx-auto lg:mx-0 transition-all duration-500 group-hover:shadow-elevated">
               <img
                 src="/photo-about.jpg"
                 alt="Елена Сорокина — психолог"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
             </div>
 
-            {/* Декоративный элемент */}
+            {/* Декоративные элементы */}
             <div
-              className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-primary-100/50 -z-10"
+              className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-gradient-to-br from-primary-200/50 to-primary-100/30 -z-10 transition-transform duration-500 group-hover:scale-110"
+              aria-hidden="true"
+            />
+            <div
+              className="absolute -top-4 -left-4 w-24 h-24 rounded-full bg-gradient-to-br from-accent-200/30 to-accent-100/20 -z-10 animate-float-slow"
               aria-hidden="true"
             />
           </div>
@@ -56,8 +60,13 @@ export default function AboutPreview() {
             {/* Список компетенций */}
             <ul className="space-y-3 mb-8">
               {credentials.map((item, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary-500 mt-0.5 flex-shrink-0" />
+                <li 
+                  key={index} 
+                  className="flex items-start gap-3 group/item"
+                >
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform duration-300">
+                    <CheckCircle className="w-4 h-4 text-primary-600" />
+                  </div>
                   <span className="text-stone-700">{item}</span>
                 </li>
               ))}

@@ -44,9 +44,9 @@ export default function Header() {
     <header
       suppressHydrationWarning
       className={clsx(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-soft py-3"
+          ? "bg-white/80 backdrop-blur-xl shadow-glass py-3 border-b border-white/30"
           : "bg-transparent py-5"
       )}
     >
@@ -54,7 +54,7 @@ export default function Header() {
         <nav className="flex items-center justify-between">
           {/* Логотип */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center transition-transform group-hover:scale-105">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-glow">
               <span className="text-white font-heading font-bold text-lg">
                 {siteConfig.name[0]}
               </span>

@@ -26,23 +26,39 @@ export default function FAQ() {
           {faqItems.map((item, index) => (
             <div
               key={index}
-              className="rounded-2xl border border-stone-200 overflow-hidden transition-colors hover:border-primary-200"
+              className={clsx(
+                "rounded-2xl overflow-hidden transition-all duration-300",
+                "bg-white/60 backdrop-blur-sm border",
+                openIndex === index 
+                  ? "border-primary-200 shadow-glass" 
+                  : "border-white/40 hover:border-primary-100 hover:bg-white/80"
+              )}
             >
               <button
                 onClick={() => toggle(index)}
-                className="w-full flex items-center justify-between p-5 md:p-6 text-left"
+                className="w-full flex items-center justify-between p-5 md:p-6 text-left group"
                 aria-expanded={openIndex === index}
                 aria-controls={`faq-answer-${index}`}
               >
-                <span className="font-heading font-semibold text-stone-900 pr-4">
+                <span className={clsx(
+                  "font-heading font-semibold pr-4 transition-colors",
+                  openIndex === index ? "text-primary-700" : "text-stone-900 group-hover:text-primary-600"
+                )}>
                   {item.question}
                 </span>
-                <ChevronDown
-                  className={clsx(
-                    "w-5 h-5 text-stone-400 flex-shrink-0 transition-transform duration-200",
-                    openIndex === index && "rotate-180 text-primary-600"
-                  )}
-                />
+                <div className={clsx(
+                  "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                  openIndex === index 
+                    ? "bg-primary-100 rotate-180" 
+                    : "bg-stone-100 group-hover:bg-primary-50"
+                )}>
+                  <ChevronDown
+                    className={clsx(
+                      "w-5 h-5 transition-colors duration-200",
+                      openIndex === index ? "text-primary-600" : "text-stone-400"
+                    )}
+                  />
+                </div>
               </button>
 
               <div

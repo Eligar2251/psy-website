@@ -24,15 +24,15 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md",
+    "btn-shine bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:from-primary-700 hover:to-primary-600 active:from-primary-800 active:to-primary-700 shadow-md hover:shadow-lg hover:shadow-primary-500/20",
   secondary:
-    "bg-primary-50 text-primary-700 hover:bg-primary-100 active:bg-primary-200",
+    "bg-primary-50/80 backdrop-blur-sm text-primary-700 hover:bg-primary-100 active:bg-primary-200 border border-primary-100",
   outline:
-    "border-2 border-primary-600 text-primary-600 hover:bg-primary-50 active:bg-primary-100",
+    "border-2 border-primary-500/80 text-primary-600 hover:bg-primary-50/50 hover:border-primary-600 active:bg-primary-100 backdrop-blur-sm",
   ghost:
-    "text-primary-600 hover:bg-primary-50 active:bg-primary-100",
+    "text-primary-600 hover:bg-primary-50/80 active:bg-primary-100 backdrop-blur-sm",
   accent:
-    "bg-accent-500 text-white hover:bg-accent-600 active:bg-accent-700 shadow-sm hover:shadow-md",
+    "btn-shine bg-gradient-to-r from-accent-500 to-accent-400 text-white hover:from-accent-600 hover:to-accent-500 active:from-accent-700 active:to-accent-600 shadow-md hover:shadow-lg hover:shadow-accent-500/20",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

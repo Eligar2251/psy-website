@@ -7,9 +7,12 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-stone-900 text-stone-300" role="contentinfo">
+    <footer className="bg-gradient-to-b from-stone-900 to-stone-950 text-stone-300 relative overflow-hidden" role="contentinfo">
+      {/* Decorative gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-950/20 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+      
       {/* Основная часть */}
-      <div className="border-b border-stone-800">
+      <div className="border-b border-stone-800/50 relative z-10">
         <Container className="py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
             {/* Колонка 1: О психологе */}
@@ -39,7 +42,7 @@ export default function Footer() {
                   href={`https://t.me/${siteConfig.telegram.replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-stone-800 flex items-center justify-center text-stone-400 hover:bg-primary-600 hover:text-white transition-colors"
+                  className="w-10 h-10 rounded-lg bg-stone-800/80 flex items-center justify-center text-stone-400 hover:bg-gradient-to-br hover:from-primary-600 hover:to-primary-500 hover:text-white hover:shadow-glow transition-all duration-300 hover:-translate-y-0.5"
                   aria-label="Telegram"
                 >
                   <Send className="w-4 h-4" />
